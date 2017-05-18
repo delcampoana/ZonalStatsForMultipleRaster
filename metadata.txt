@@ -14,10 +14,10 @@ version=0.1
 author=Ana del Campo Sánchez
 email=delcampoana@gmail.com
 
-about=Complete About
+about=https://github.com/delcampoana/ZonalStatsForMultipleRaster
 
-tracker=www.uclm.es
-repository=www.uclm.es
+tracker=https://github.com/delcampoana/ZonalStatsForMultipleRaster
+repository=https://github.com/delcampoana/ZonalStatsForMultipleRaster
 # End of mandatory metadata
 
 # Recommended items:
@@ -26,9 +26,9 @@ repository=www.uclm.es
 # changelog=
 
 # Tags are comma separated with spaces allowed
-tags=raster, stats, zonal, multiple
+tags=raster, stats, zonal, multiple, statistics
 
-homepage=www.uclm.es
+homepage=https://github.com/delcampoana/ZonalStatsForMultipleRaster
 category=Plugins
 icon=icon.png
 # experimental flag
