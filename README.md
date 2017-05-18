@@ -16,5 +16,5 @@ Be carefull with:
   - The Load Data process only can be pressed once. When you'll restart QGis, the new Load Data process will consider the back up information what you saved previosly.
   - The default radius for the circle is 5 pixel.
   - The statistics calculated are count, mean and standard deviation.
-  
-  Contatc: delcampoana@gmail.com
+
+Contact: delcampoana@gmail.com
