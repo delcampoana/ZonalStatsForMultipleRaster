@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/plugins/ZonalStatsForMultipleRaster" >
+        <file>icon.png</file>
+    </qresource>
+</RCC>
