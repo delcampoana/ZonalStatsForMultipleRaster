@@ -96,14 +96,12 @@ class ZonalStatsForMultipleRasterDockWidget(QtGui.QDockWidget, FORM_CLASS):
         self.backupPushButton.setEnabled(True)
         self.statsPushButton.setEnabled(True)
         self.crs = QgsCoordinateReferenceSystem(25830, QgsCoordinateReferenceSystem.PostgisCrsId)
-        # Borrar TODAS las capas previas
         self.iface.newProject()
         QgsProject.instance().layerTreeRoot().removeAllChildren()
         QgsMapLayerRegistry.instance().removeAllMapLayers()
         for loadlayer in QgsMapLayerRegistry.instance().mapLayers().values():
             QgsMapLayerRegistry.instance().removeMapLayers([loadlayer])
         self.textBrowser.append('> Previous loaded layers removed')
-        # Crear y definir carpetas
         self.baseFolder = os.path.dirname(self.inputFolder)
         self.backupFolder = self.inputFolder + '_backup'
         self.backupPointFolder = self.backupFolder + '\\shp_point'
@@ -128,26 +126,21 @@ class ZonalStatsForMultipleRasterDockWidget(QtGui.QDockWidget, FORM_CLASS):
             os.mkdir(self.processFolderTmp)
             os.mkdir(self.processFolderSHPpoint)
             os.mkdir(self.processFolderSHPpolygon)
-        # Limpiar .aux.xml
         inputFileList = os.listdir(self.inputFolder)
         for file in inputFileList:
             if file.endswith('.aux.xml'):
                 os.remove(self.inputFolder + '\\' + file)
-        # PROCESO
         pointForm = uic.loadUiType(self.path_plugin + constants.CONST_UI_POINT)
         for rasterFile in self.rasterFileList:
             self.textBrowser.append('> ' + rasterFile + ' processing...')
-            self.textBrowser.update() #mejora pero no es suficiente
+            self.textBrowser.update()
             img = rasterFile.split('.')[0]
             rasterInputFilePath = self.inputFolder + '\\' + rasterFile
             rasterInputLayer = QgsRasterLayer(rasterInputFilePath, rasterFile)
             rasterTmpFilePath = self.processFolderTmp + '\\' + rasterFile
             rasterFilePath = self.processFolderImg + '\\' + img + '.tif'
-            # Crear grupo de capas
             groupLayer = QgsProject.instance().layerTreeRoot().insertGroup(-1, rasterFile)
-            # Generar copia
             shutil.copy2(rasterInputFilePath, rasterTmpFilePath)
-            # Crea wld
             processing.runalg("gdalogr:extractprojection",
                               rasterTmpFilePath,
                               True)
@@ -166,14 +159,10 @@ class ZonalStatsForMultipleRasterDockWidget(QtGui.QDockWidget, FORM_CLASS):
             coefWorld = '%s\n%s\n%s\n%s\n%s\n%s\n' % (coefA, coefD, coefB, coefE, coefC, coefF)
             rasterWldFile.writeData(coefWorld)
             rasterWldFile.close()
-            # Generar GTiff
             warp = "gdalwarp -q -overwrite -of GTiff -t_srs EPSG:25830 " + rasterTmpFilePath + " " + rasterFilePath
-            # os.system(warp)
             subprocess.call(warp, shell=True)
             os.remove(rasterWldFilePath)
-            # os.remove(rasterTmpFilePath) #la solucion es crear un subproceso para que python se cierre
-            # Cargar raster
-            rasterLayerName = os.path.basename(rasterFilePath)  # con extension
+            rasterLayerName = os.path.basename(rasterFilePath)
             rasterLayer = QgsRasterLayer(rasterFilePath, rasterLayerName)
             rasterLayer.setCrs(self.crs)
             if not rasterLayer.isValid():
@@ -181,14 +170,12 @@ class ZonalStatsForMultipleRasterDockWidget(QtGui.QDockWidget, FORM_CLASS):
             QgsMapLayerRegistry.instance().addMapLayer(rasterLayer, False)
             groupLayer.insertLayer(0, rasterLayer)
             self.iface.legendInterface().setLayerVisible(rasterLayer, False)
-            # Crear shp de puntos
             pointFilePath = self.processFolderSHPpoint + '\\' + img + '_point.shp'
             pointLayerName = os.path.basename(pointFilePath)
             pointLayerMem = QgsVectorLayer(
                 "Point?crs=EPSG:25830&field=id_num:integer&field=id_name:string&field=img:string&field=feature1:string&field=feature2:string&field=feature3:string&field=radius:integer&index=yes",
                 pointLayerName, "memory")
             QgsVectorFileWriter.writeAsVectorFormat(pointLayerMem, pointFilePath, "utf-8", None, "ESRI Shapefile")
-            # Cargar shp de puntos
             pointLayer = QgsVectorLayer(pointFilePath, pointLayerName, "ogr")
             if not pointLayer.isValid():
                 raise ValueError('ERROR LOADING VECTOR FILE')
@@ -202,11 +189,10 @@ class ZonalStatsForMultipleRasterDockWidget(QtGui.QDockWidget, FORM_CLASS):
                 os.remove(self.processFolderSHPpoint + '\\' + img + '_point.cpg')
             if os.path.isfile(self.processFolderSHPpoint + '\\' + img + '_point.qpj') == True:
                 os.remove(self.processFolderSHPpoint + '\\' + img + '_point.qpj')
-            # Completar con shp de puntos previo
             pointBackupFile = self.backupPointFolder + '\\' + img + '_point.shp'
             if os.path.isfile(pointBackupFile):
                 self.iface.legendInterface().setLayerVisible(pointLayer, False)
-                pointBackupLayerName = os.path.basename(pointBackupFile) + '_backup'  # con extension
+                pointBackupLayerName = os.path.basename(pointBackupFile) + '_backup'
                 pointBackupLayer = QgsVectorLayer(pointBackupFile, pointBackupLayerName, "ogr")
                 if not pointBackupLayer.isValid():
                     raise ValueError('ERROR LOADING VECTOR BACKUP FILE')
@@ -215,21 +201,15 @@ class ZonalStatsForMultipleRasterDockWidget(QtGui.QDockWidget, FORM_CLASS):
                 pointLayer.updateFields()
                 pointBackupFile = ''
                 pointBackupLayer = ''
-        # Limpiar .aux.xml
         inputFileList = os.listdir(self.inputFolder)
         for file in inputFileList:
             if file.endswith('.aux.xml'):
                 os.remove(self.inputFolder + '\\' + file)
-        # imgFileList = os.listdir(self.processFolderImg)
-        # for file in imgFileList:
-        #     if file.endswith('.aux.xml'):
-        #         os.remove(self.processFolderImg + '\\' + file)
         tmpFileList = os.listdir(self.processFolderTmp)
         for file in tmpFileList:
             if file.endswith('.aux.xml'):
                 os.remove(self.processFolderTmp + '\\' + file)
         self.iface.zoomFull()
-        # self.textBrowser.append('> %s images ready to identify zones' %(len(self.rasterFileList)))
         self.textBrowser.append('> Load Data DONE. Edit point layers')
 
     def createBackupProcess(self):
@@ -241,35 +221,26 @@ class ZonalStatsForMultipleRasterDockWidget(QtGui.QDockWidget, FORM_CLASS):
 
     def calculateStatsProcess(self):
         buffer = 5
-        # Listar capas cargadas
-        loadedLayersList = [layer for layer in QgsMapLayerRegistry.instance().mapLayers()]  # lista de ids
-        # Borrar capas previas
+        loadedLayersList = [layer for layer in QgsMapLayerRegistry.instance().mapLayers()]
         for layer in loadedLayersList:
             if '_polygon' in layer:
                 QgsMapLayerRegistry.instance().removeMapLayer(layer)
-        # Borrar archivos previos
         if os.path.isdir(self.processFolderSHPpolygon) == True:
             shutil.rmtree(self.processFolderSHPpolygon)
             os.mkdir(self.processFolderSHPpolygon)
-        # Listar grupos de capas
         loadedGroupsNameList = [group.name() for group in QgsProject.instance().layerTreeRoot().children()]
-        # Comprobar si faltan grupos de capas y cargar
         for groupName in self.rasterFileList:
             if not groupName in loadedGroupsNameList:
                 QgsProject.instance().layerTreeRoot().insertGroup(-1, groupName)
-        # PROCESO
         for rasterFile in self.rasterFileList:
             self.textBrowser.append('> %s processing...' %(rasterFile))
             img = QFileInfo(rasterFile).baseName()
-            # Preparar capa de puntos
             pointFile = self.processFolderSHPpoint + '\\' + img + '_point.shp'
             pointLayerName = os.path.basename(pointFile)
-            pointLayer = QgsMapLayerRegistry.instance().mapLayersByName(pointLayerName)[0]  # Identificar primer elemento de la lista
+            pointLayer = QgsMapLayerRegistry.instance().mapLayersByName(pointLayerName)[0]
             pointLayer.startEditing()
-            # Completar campo img
             for feat in pointLayer.getFeatures():
                 pointLayer.changeAttributeValue(feat.id(), 2, img)
-            # Completar campo id_name
             fieldNames = []
             id_nameList = []
             for feat in pointLayer.getFeatures():
@@ -288,12 +259,10 @@ class ZonalStatsForMultipleRasterDockWidget(QtGui.QDockWidget, FORM_CLASS):
                 borrar, id_nameAtt = id_nameAtt.split('_', 1)
                 id_nameList.append(id_nameAtt)
                 pointLayer.changeAttributeValue(feat.id(), 1, id_nameAtt)
-            # Completar campo id_num
             id_numAtt = 0
             for feat in pointLayer.getFeatures():
                 id_numAtt = id_numAtt + 1
                 pointLayer.changeAttributeValue(feat.id(), 0, id_numAtt)
-            # Completar campo radius MEJORAR EN EL FORMULARIO DE ENTRADA
             for feat in pointLayer.getFeatures():
                 fields = feat.fields()
                 field = pointLayer.dataProvider().fields().field(6).name()
@@ -302,7 +271,6 @@ class ZonalStatsForMultipleRasterDockWidget(QtGui.QDockWidget, FORM_CLASS):
                     pointLayer.changeAttributeValue(feat.id(), 6, buffer)
             pointLayer.commitChanges()
             self.iface.legendInterface().setLayerVisible(pointLayer, False)
-            # Construir buffer
             polygonFilePath = self.processFolderSHPpolygon + "\\" + img + "_polygon.shp"
             QgsGeometryAnalyzer().buffer(pointLayer, polygonFilePath, 500, False, False, 6)
             qpj = self.processFolderSHPpolygon + "\\" + img + "_polygon.qpj"
@@ -314,14 +282,12 @@ class ZonalStatsForMultipleRasterDockWidget(QtGui.QDockWidget, FORM_CLASS):
                 raise ValueError('ERROR LOADING POLYGON VECTOR FILE')
             polygonLayer.setCrs(self.crs)
             QgsMapLayerRegistry.instance().addMapLayer(polygonLayer, False)
-            # Cargar buffer en grupo concreto
             groupName = rasterFile
             groupLayer = QgsProject.instance().layerTreeRoot().findGroup(groupName)
             QgsProject.instance().layerTreeRoot().findGroup(groupName).insertLayer(1, polygonLayer)
             QgsProject.instance().layerTreeRoot().findLayer(polygonLayer.id()).setCustomProperty("showFeatureCount",True)
             self.iface.legendInterface().setLayerVisible(polygonLayer, False)
             polygonLayer.loadNamedStyle(self.path_plugin + constants.CONST_QML_POLYGON)
-            # Extraer estadisticas
             rasterFilePath = self.processFolderImg + "\\" + img + '.tif'
             rasterLayerName = os.path.basename(rasterFilePath)
             rasterLayer = QgsMapLayerRegistry.instance().mapLayersByName(rasterLayerName)[0]
@@ -334,28 +300,23 @@ class ZonalStatsForMultipleRasterDockWidget(QtGui.QDockWidget, FORM_CLASS):
                                               rasterFilePath,
                                               prefix,
                                               band,
-                                              QgsZonalStatistics.Count | QgsZonalStatistics.Mean | QgsZonalStatistics.StDev)  # QgsZonalStatistics.All)
+                                              QgsZonalStatistics.Count | QgsZonalStatistics.Mean | QgsZonalStatistics.StDev)
                 zoneStat.calculateStatistics(None)
-        # self.textBrowser.append('> %s polygon vector files ready to calculate statistics' %(len(self.rasterFileList)))
-        # Crear archivos de estadisticas
         self.textBrowser.append('> stas file writing...')
         statsFilePath = self.processFolder + '\\stats.txt'
         statsFile = QFile(statsFilePath)
         if not statsFile.open(QIODevice.WriteOnly | QIODevice.Text):
             raise ValueError('Error opening output file:\n' + statsFile)
-        # Listar vectoriales de poligonos procesados
         processFolderSHPpolygonFullList = os.listdir(self.processFolderSHPpolygon)
         processFolderSHPpolygonList = []
         for files in processFolderSHPpolygonFullList:
             (name, extension) = os.path.splitext(files)
             if (extension == ".shp"):
                 processFolderSHPpolygonList.append(name + extension)
-        # Listar campos  y escribir sus nombres en stats
         polygonLayerName = processFolderSHPpolygonList[0]
         polygonLayer = QgsMapLayerRegistry.instance().mapLayersByName(polygonLayerName)[0]
         fieldNames = [field.name() for field in polygonLayer.pendingFields()]
         statsFile.writeData(','.join(fieldNames) + '\n')
-        # Listar estadisticas procesadas
         for polygonLayerName in processFolderSHPpolygonList:
             polygonFilePath = self.processFolderSHPpolygon + polygonLayerName
             polygonLayer = QgsMapLayerRegistry.instance().mapLayersByName(polygonLayerName)[0]
